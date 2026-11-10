@@ -1,9 +1,9 @@
 # プロジェクト概要
 
 <!-- PROJECT-CONFIG
-repository_name=
-app_name=
-app_dir=
+repository_name=isdev-t3
+app_name=isdev-t3
+app_dir=.
 -->
 
 ## 開発者（GitHub名）
@@ -11,6 +11,10 @@ app_dir=
 `/init-project` が、GitHubから取得した最新の Collaborator 一覧でこのブロックを更新する。各Issueの担当者はGitHub上で管理する。
 
 <!-- COLLABORATORS: START -->
+- cocacola1021
+- e1b24064
+- ha9913570
+- ponzu2418
 <!-- COLLABORATORS: END -->
 
 ## 開発するアプリケーションの条件
