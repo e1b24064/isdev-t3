@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -169,5 +170,58 @@ class RoomControllerTest {
         .session(anotherAdminSession))
         .andExpect(status().isOk())
         .andExpect(content().string(not(containsString("ゲーム開始"))));
+  }
+
+  @Test
+  void fortyFirstParticipantIsRejectedWithOverCapacityMessage() throws Exception {
+    String roomUrl = mockMvc.perform(post("/rooms/create")
+        .session(adminSession)
+        .param("mode", "TEAM"))
+        .andExpect(status().is3xxRedirection())
+        .andReturn()
+        .getResponse()
+        .getRedirectedUrl();
+
+    // 定員ちょうどの40人を参加させる
+    for (int i = 0; i < 40; i++) {
+      MockHttpSession session = new MockHttpSession();
+      mockMvc.perform(post("/login")
+          .session(session)
+          .param("username", "participant")
+          .param("password", "p@ss"));
+
+      mockMvc.perform(post(roomUrl + "/join")
+          .session(session))
+          .andExpect(status().is3xxRedirection());
+    }
+
+    mockMvc.perform(get(roomUrl + "/participants")
+        .session(adminSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(40));
+
+    // 41人目
+    MockHttpSession overflowSession = new MockHttpSession();
+    mockMvc.perform(post("/login")
+        .session(overflowSession)
+        .param("username", "participant")
+        .param("password", "p@ss"));
+
+    mockMvc.perform(post(roomUrl + "/join")
+        .session(overflowSession))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(flash().attribute("joinError", containsString("定員")));
+
+    // 参加者数が40人のまま増えていないことを確認
+    mockMvc.perform(get(roomUrl + "/participants")
+        .session(adminSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(40));
+
+    // リダイレクト後のルーム画面にエラーメッセージが表示されることを確認
+    mockMvc.perform(get(roomUrl)
+        .session(overflowSession))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("定員(40人)に達しているため参加できません。")));
   }
 }

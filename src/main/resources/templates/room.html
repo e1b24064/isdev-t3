@@ -13,10 +13,38 @@
     <p>モード: <span th:text="${room.mode == 'INDIVIDUAL' ? '個人戦' : 'チーム戦'}">モード</span></p>
     <p>作成者: <span th:text="${room.owner}">作成者</span></p>
 
+    <p th:if="${joinError != null}" th:text="${joinError}"></p>
+
     <h2>参加者</h2>
     <ul id="participant-list" th:attr="data-room-id=${room.id}">
       <li th:each="participant : ${room.participants}" th:text="${participant}">参加者</li>
     </ul>
+
+    <div th:if="${role == 'PARTICIPANT'}">
+      <h2>同じチームを希望する相手</h2>
+      <form th:action="@{/rooms/{roomId}/preference(roomId=${room.id})}" method="post">
+        <select name="preferredUsername" required>
+          <option th:each="p : ${room.participants}" th:if="${p != username}" th:value="${p}" th:text="${p}"></option>
+        </select>
+        <button type="submit">希望を送信</button>
+      </form>
+    </div>
+
+    <div th:if="${isAdmin}">
+      <form th:action="@{/rooms/{roomId}/assign-teams(roomId=${room.id})}" method="post">
+        <button type="submit">チーム編成</button>
+      </form>
+    </div>
+
+    <div th:if="${!teams.isEmpty()}">
+      <h2>チーム編成結果</h2>
+      <div th:each="entry : ${teams}">
+        <h3 th:text="'チーム ' + ${entry.key}"></h3>
+        <ul>
+          <li th:each="member : ${entry.value}" th:text="${member}"></li>
+        </ul>
+      </div>
+    </div>
 
     <div th:if="${isAdmin}">
       <button type="button">ゲーム開始</button>
