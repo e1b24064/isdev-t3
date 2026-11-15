@@ -38,8 +38,8 @@ public class AuthController {
       return "login";
     }
 
+    session.setAttribute("username", user.username());
     session.setAttribute("role", user.role());
-    model.addAttribute("title", user.role().equals("ADMIN") ? "管理者タイトル画面" : "参加者タイトル画面");
-    return "login";
+    return "redirect:/title";
   }
 }

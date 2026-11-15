@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+  <meta charset="UTF-8">
+  <title>ルーム画面</title>
+</head>
+
+<body>
+  <main>
+    <h1>ルーム画面</h1>
+    <p>部屋ID: <span th:text="${room.id}">0</span></p>
+    <p>モード: <span th:text="${room.mode == 'INDIVIDUAL' ? '個人戦' : 'チーム戦'}">モード</span></p>
+    <p>作成者: <span th:text="${room.owner}">作成者</span></p>
+
+    <h2>参加者</h2>
+    <ul id="participant-list" th:attr="data-room-id=${room.id}">
+      <li th:each="participant : ${room.participants}" th:text="${participant}">参加者</li>
+    </ul>
+
+    <div th:if="${isAdmin}">
+      <button type="button">ゲーム開始</button>
+    </div>
+
+    <form th:if="${role == 'PARTICIPANT'}" th:action="@{/rooms/{roomId}/leave(roomId=${room.id})}" method="post">
+      <button type="submit">ルームから退出</button>
+    </form>
+  </main>
+  <script>
+    const participantList = document.getElementById("participant-list");
+    const roomId = participantList.dataset.roomId;
+
+    async function refreshParticipants() {
+      try {
+        const response = await fetch(`/rooms/${roomId}/participants`);
+        if (!response.ok) {
+          return;
+        }
+
+        const participants = await response.json();
+        participantList.replaceChildren(...participants.map((username) => {
+          const item = document.createElement("li");
+          item.textContent = username;
+          return item;
+        }));
+      } catch (error) {
+        console.error("参加者一覧の更新に失敗しました。", error);
+      }
+    }
+
+    refreshParticipants();
+    window.setInterval(refreshParticipants, 3000);
+  </script>
+</body>
+
+</html>
