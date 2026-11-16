@@ -1,8 +1,10 @@
 package oit.is.t3.isdev_t3.controller;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import jakarta.servlet.http.HttpSession;
@@ -14,12 +16,24 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import oit.is.t3.isdev_t3.mapper.TeamMapper;
+import oit.is.t3.isdev_t3.service.TeamAssignmentService;
 
 @Controller
 public class RoomController {
 
   private final Map<Long, Room> rooms = new ConcurrentHashMap<>();
   private final AtomicLong roomIdSequence = new AtomicLong(1L);
+
+  private final TeamMapper teamMapper;
+  private final TeamAssignmentService teamAssignmentService;
+
+  public RoomController(TeamMapper teamMapper, TeamAssignmentService teamAssignmentService) {
+    this.teamMapper = teamMapper;
+    this.teamAssignmentService = teamAssignmentService;
+  }
 
   @GetMapping("/title")
   public String titlePage(HttpSession session, Model model) {
@@ -66,11 +80,18 @@ public class RoomController {
     model.addAttribute("role", role);
     model.addAttribute("username", username);
     model.addAttribute("isAdmin", "ADMIN".equals(role) && room.isOwnedBy(session.getId()));
+
+    Map<Integer, List<String>> teams = new TreeMap<>();
+    for (TeamMapper.TeamMemberRow row : teamMapper.selectMembersByRoom(roomId)) {
+      teams.computeIfAbsent(row.teamNumber(), k -> new ArrayList<>()).add(row.username());
+    }
+    model.addAttribute("teams", teams);
     return "room";
   }
 
   @PostMapping("/rooms/{roomId}/join")
-  public String joinRoom(@PathVariable long roomId, HttpSession session) {
+  public String joinRoom(@PathVariable long roomId, HttpSession session,
+      RedirectAttributes redirectAttributes) {
     String role = (String) session.getAttribute("role");
     String username = (String) session.getAttribute("username");
     if (!"PARTICIPANT".equals(role) || username == null) {
@@ -81,13 +102,18 @@ public class RoomController {
     if (room == null) {
       return "redirect:/title";
     }
+    if (room.getParticipants().size() >= TeamAssignmentService.MAX_PARTICIPANTS) {
+      redirectAttributes.addFlashAttribute("joinError", "定員(40人)に達しているため参加できません。");
+      return "redirect:/rooms/" + roomId;
+    }
     room.addParticipant(session.getId(), username);
     return "redirect:/rooms/" + roomId;
   }
 
   @PostMapping("/rooms/join")
-  public String joinRoomById(@RequestParam long roomId, HttpSession session) {
-    return joinRoom(roomId, session);
+  public String joinRoomById(@RequestParam long roomId, HttpSession session,
+      RedirectAttributes redirectAttributes) {
+    return joinRoom(roomId, session, redirectAttributes);
   }
 
   @PostMapping("/rooms/{roomId}/leave")
@@ -119,13 +145,54 @@ public class RoomController {
     return ResponseEntity.ok(room.getParticipants());
   }
 
+  @PostMapping("/rooms/{roomId}/preference")
+  public String setPreference(@PathVariable long roomId, @RequestParam String preferredUsername,
+      HttpSession session) {
+    String role = (String) session.getAttribute("role");
+    String username = (String) session.getAttribute("username");
+    if (!"PARTICIPANT".equals(role) || username == null) {
+      return "redirect:/login";
+    }
+    teamMapper.deletePreference(roomId, username);
+    teamMapper.insertPreference(roomId, username, preferredUsername);
+    return "redirect:/rooms/" + roomId;
+  }
+
+  @PostMapping("/rooms/{roomId}/assign-teams")
+  public String assignTeams(@PathVariable long roomId, HttpSession session) {
+    String role = (String) session.getAttribute("role");
+    Room room = rooms.get(roomId);
+    if (room == null || !"ADMIN".equals(role) || !room.isOwnedBy(session.getId())) {
+      return "redirect:/login";
+    }
+
+    List<String> participants = room.getParticipants();
+    Map<String, String> preferences = new HashMap<>();
+    for (TeamMapper.PreferenceRow row : teamMapper.selectPreferencesByRoom(roomId)) {
+      preferences.put(row.username(), row.preferredUsername());
+    }
+
+    Map<Integer, List<String>> teams = teamAssignmentService.assign(participants, preferences);
+
+    teamMapper.deleteMembersByRoom(roomId);
+    teamMapper.deleteTeamsByRoom(roomId);
+    for (Map.Entry<Integer, List<String>> entry : teams.entrySet()) {
+      teamMapper.insertTeam(roomId, entry.getKey());
+      for (String member : entry.getValue()) {
+        teamMapper.insertMember(roomId, entry.getKey(), member);
+      }
+    }
+    return "redirect:/rooms/" + roomId;
+  }
+
   public static class Room {
 
     private final long id;
     private final String mode;
     private final String ownerSessionId;
     private final String ownerUsername;
-    private final Map<String, String> participants = new ConcurrentHashMap<>();
+    private final Map<String, String> participants = java.util.Collections
+        .synchronizedMap(new java.util.LinkedHashMap<>());
 
     Room(long id, String mode, String ownerSessionId, String ownerUsername) {
       this.id = id;
