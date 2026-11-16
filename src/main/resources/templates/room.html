@@ -47,7 +47,9 @@
     </div>
 
     <div th:if="${isAdmin}">
-      <button type="button">ゲーム開始</button>
+      <form th:action="@{/quiz/start}" method="post">
+        <button type="submit">ゲーム開始</button>
+      </form>
     </div>
 
     <form th:if="${role == 'PARTICIPANT'}" th:action="@{/rooms/{roomId}/leave(roomId=${room.id})}" method="post">
@@ -76,8 +78,21 @@
       }
     }
 
+    async function checkQuizStarted() {
+      try {
+        const response = await fetch("/quiz/status");
+        if (response.ok && await response.json()) {
+          window.location.href = "/quiz";
+        }
+      } catch (error) {
+        console.error("クイズ開始状態の確認に失敗しました。", error);
+      }
+    }
+
     refreshParticipants();
+    checkQuizStarted();
     window.setInterval(refreshParticipants, 3000);
+    window.setInterval(checkQuizStarted, 3000);
   </script>
 </body>
 
