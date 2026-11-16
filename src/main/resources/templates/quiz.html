@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+  <meta charset="UTF-8">
+  <title>クイズ</title>
+</head>
+
+<body>
+  <main>
+    <h1>クイズ</h1>
+
+    <form th:if="${isAdmin and !quizStarted}" action="/quiz/start" method="post">
+      <button type="submit">問題を開始</button>
+    </form>
+
+    <p th:if="${!quizStarted}">管理者が問題を開始するまでお待ちください。</p>
+
+    <section th:if="${question != null}">
+      <h2 th:text="${question.questionText}">問題文</h2>
+      <div>
+        <button type="button" th:text="${question.optionA}">選択肢A</button>
+        <button type="button" th:text="${question.optionB}">選択肢B</button>
+        <button type="button" th:text="${question.optionC}">選択肢C</button>
+        <button type="button" th:text="${question.optionD}">選択肢D</button>
+      </div>
+    </section>
+  </main>
+</body>
+
+</html>
