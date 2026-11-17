@@ -35,3 +35,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Local logs and generated reports
+**/.log/
+docs/temp/*
+!docs/temp/.gitkeep
+docs/weekly-summary_*.html
+docs/weekly-summary-data/
