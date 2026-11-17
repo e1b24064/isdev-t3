@@ -18,12 +18,15 @@
 
     <section th:if="${question != null}">
       <h2 th:text="${question.questionText}">問題文</h2>
-      <div>
-        <button type="button" th:text="${question.optionA}">選択肢A</button>
-        <button type="button" th:text="${question.optionB}">選択肢B</button>
-        <button type="button" th:text="${question.optionC}">選択肢C</button>
-        <button type="button" th:text="${question.optionD}">選択肢D</button>
-      </div>
+      <p th:if="${answerMessage != null}" th:text="${answerMessage}"></p>
+      <p>得点: <span th:text="${score}">0</span></p>
+      <p th:if="${!isAdmin and answerClaimed and !canAnswer and answerMessage == null}">回答権を失いました。</p>
+      <form th:if="${!isAdmin and canAnswer}" action="/quiz/answer" method="post">
+        <button type="submit" name="option" value="1" th:text="${question.optionA}">選択肢A</button>
+        <button type="submit" name="option" value="2" th:text="${question.optionB}">選択肢B</button>
+        <button type="submit" name="option" value="3" th:text="${question.optionC}">選択肢C</button>
+        <button type="submit" name="option" value="4" th:text="${question.optionD}">選択肢D</button>
+      </form>
     </section>
   </main>
 </body>

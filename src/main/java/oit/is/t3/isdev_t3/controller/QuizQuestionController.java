@@ -2,7 +2,6 @@ package oit.is.t3.isdev_t3.controller;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicBoolean;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,16 +11,18 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import oit.is.t3.isdev_t3.mapper.QuizQuestionMapper;
 import oit.is.t3.isdev_t3.model.QuizQuestion;
+import oit.is.t3.isdev_t3.service.QuizAnswerService;
 
 @Controller
 public class QuizQuestionController {
 
   private final QuizQuestionMapper quizQuestionMapper;
-  private final AtomicBoolean quizStarted = new AtomicBoolean();
-  private volatile QuizQuestion currentQuestion;
+  private final QuizAnswerService quizAnswerService;
 
-  public QuizQuestionController(QuizQuestionMapper quizQuestionMapper) {
+  public QuizQuestionController(QuizQuestionMapper quizQuestionMapper,
+      QuizAnswerService quizAnswerService) {
     this.quizQuestionMapper = quizQuestionMapper;
+    this.quizAnswerService = quizAnswerService;
   }
 
   @GetMapping("/quiz")
@@ -31,11 +32,15 @@ public class QuizQuestionController {
       return "redirect:/login";
     }
 
-    model.addAttribute("quizStarted", quizStarted.get());
-    if (quizStarted.get() && currentQuestion != null) {
-      model.addAttribute("question", currentQuestion);
+    model.addAttribute("quizStarted", quizAnswerService.isStarted());
+    if (quizAnswerService.isStarted()) {
+      model.addAttribute("question", quizAnswerService.getCurrentQuestion());
     }
     model.addAttribute("isAdmin", "ADMIN".equals(role));
+    String username = (String) session.getAttribute("username");
+    model.addAttribute("canAnswer", quizAnswerService.canAttempt(username));
+    model.addAttribute("answerClaimed", quizAnswerService.hasAnswerer());
+    model.addAttribute("score", quizAnswerService.getScore(username));
     return "quiz";
   }
 
@@ -47,9 +52,8 @@ public class QuizQuestionController {
     List<QuizQuestion> questions = quizQuestionMapper.findAll();
     if (!questions.isEmpty()) {
       int questionIndex = ThreadLocalRandom.current().nextInt(questions.size());
-      currentQuestion = questions.get(questionIndex);
+      quizAnswerService.start(questions.get(questionIndex));
     }
-    quizStarted.set(true);
     return "redirect:/quiz";
   }
 
@@ -58,6 +62,6 @@ public class QuizQuestionController {
     if (session.getAttribute("role") == null) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
-    return ResponseEntity.ok(quizStarted.get());
+    return ResponseEntity.ok(quizAnswerService.isStarted());
   }
 }

@@ -1,6 +1,7 @@
 INSERT INTO users (username, password, role) VALUES
     ('admin', '{bcrypt}$2y$10$ngxCDmuVK1TaGchiYQfJ1OAKkd64IH6skGsNw1sLabrTICOHPxC0e', 'ADMIN'),
-    ('participant', '{bcrypt}$2y$10$ngxCDmuVK1TaGchiYQfJ1OAKkd64IH6skGsNw1sLabrTICOHPxC0e', 'PARTICIPANT');
+    ('participant', '{bcrypt}$2y$10$ngxCDmuVK1TaGchiYQfJ1OAKkd64IH6skGsNw1sLabrTICOHPxC0e', 'PARTICIPANT'),
+    ('participant2', '{bcrypt}$2y$10$ngxCDmuVK1TaGchiYQfJ1OAKkd64IH6skGsNw1sLabrTICOHPxC0e', 'PARTICIPANT');
 
 INSERT INTO quiz_questions (
     question_text, option_a, option_b, option_c, option_d, correct_option
