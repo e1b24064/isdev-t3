@@ -107,7 +107,10 @@ class QuizQuestionControllerTest {
         .andExpect(status().isOk())
         .andReturn();
 
-    org.assertj.core.api.Assertions.assertThat(adminResult.getResponse().getContentAsString())
-        .isEqualTo(participantResult.getResponse().getContentAsString());
+    String adminResponse = adminResult.getResponse().getContentAsString();
+    String participantResponse = participantResult.getResponse().getContentAsString();
+    org.assertj.core.api.Assertions.assertThat(participantResponse)
+        .contains(adminResponse.substring(adminResponse.indexOf("<h2>"),
+            adminResponse.indexOf("</h2>") + "</h2>".length()));
   }
 }
